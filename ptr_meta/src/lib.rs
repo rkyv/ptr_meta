@@ -2,6 +2,8 @@
 //!
 //! [rfc]: https://rust-lang.github.io/rfcs/2580-ptr-meta.html
 
+mod impls;
+
 use core::{
     alloc::Layout,
     cmp,
@@ -11,7 +13,7 @@ use core::{
     ptr,
 };
 
-pub use ptr_meta_derive::ptr_meta;
+pub use ptr_meta_derive::{ptr_meta, Pointee};
 
 /// Provides the pointer metadata type of any pointed-to type.
 ///
@@ -358,5 +360,21 @@ mod tests {
 
         assert_eq!(meta.size_of(), 4);
         assert_eq!(meta.align_of(), 4);
+    }
+
+    #[test]
+    fn last_field_dst() {
+        #[allow(dead_code)]
+        #[derive(Pointee)]
+        struct Test<H, T> {
+            head: H,
+            tail: [T],
+        }
+
+        #[allow(dead_code)]
+        #[derive(Pointee)]
+        struct TestDyn {
+            tail: dyn core::any::Any,
+        }
     }
 }
