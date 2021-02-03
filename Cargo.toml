@@ -1,0 +1,5 @@
+[workspace]
+members = [
+    "ptr_meta",
+    "ptr_meta_derive",
+]
