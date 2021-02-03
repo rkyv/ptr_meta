@@ -54,7 +54,7 @@ fn derive_pointee_impl(input: &DeriveInput) -> TokenStream {
 
 /// Generates an implementation of `Pointee` for trait objects.
 #[proc_macro_attribute]
-pub fn ptr_meta(
+pub fn pointee(
     _attr: proc_macro::TokenStream,
     item: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
