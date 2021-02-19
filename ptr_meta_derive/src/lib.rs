@@ -70,7 +70,7 @@ pub fn pointee(
         const _: () = {
             use ptr_meta::{DynMetadata, Pointee};
 
-            impl #impl_generics Pointee for dyn #ident #ty_generics #where_clause {
+            impl #impl_generics Pointee for (dyn #ident #ty_generics #where_clause + '_) {
                 type Metadata = DynMetadata<Self>;
             }
         };
