@@ -102,7 +102,7 @@ pub use ptr_meta_derive::{pointee, Pointee};
 /// A (possibly-wide) pointer can be put back together from its address and metadata
 /// with [`from_raw_parts`] or [`from_raw_parts_mut`].
 ///
-/// [`to_raw_parts`]: *const::to_raw_parts
+/// [`to_raw_parts`]: PtrExt::to_raw_parts
 pub trait Pointee {
     /// The type for metadata in pointers and references to `Self`.
     type Metadata: Copy + Send + Sync + Ord + hash::Hash + Unpin;
