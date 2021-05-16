@@ -42,7 +42,7 @@
 //! }
 //! ```
 
-#![no_std]
+#![cfg_attr(not(feature = "std"), no_std)]
 
 mod impls;
 
@@ -117,6 +117,16 @@ impl<T> Pointee for [T] {
 }
 
 impl Pointee for str {
+    type Metadata = usize;
+}
+
+#[cfg(feature = "std")]
+impl Pointee for ::std::ffi::CStr {
+    type Metadata = usize;
+}
+
+#[cfg(feature = "std")]
+impl Pointee for ::std::ffi::OsStr {
     type Metadata = usize;
 }
 
