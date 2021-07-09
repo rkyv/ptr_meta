@@ -208,7 +208,7 @@ impl<T: Pointee + ?Sized> NonNullExt<T> for ptr::NonNull<T> {
     }
 
     fn to_raw_parts(self) -> (Self::Raw, <T as Pointee>::Metadata) {
-        let (raw, meta) = self.as_ptr().to_raw_parts();
+        let (raw, meta) = PtrExt::to_raw_parts(self.as_ptr());
         unsafe { (ptr::NonNull::new_unchecked(raw), meta) }
     }
 }
@@ -335,7 +335,7 @@ mod tests {
 
     fn test_pointee<T: Pointee + ?Sized>(value: &T) {
         let ptr = value as *const T;
-        let (raw, meta) = ptr.to_raw_parts();
+        let (raw, meta) = PtrExt::to_raw_parts(ptr);
         let re_ptr = from_raw_parts::<T>(raw, meta);
         assert_eq!(ptr, re_ptr);
     }
@@ -392,7 +392,7 @@ mod tests {
 
         test_pointee(trait_object);
 
-        let (_, meta) = (trait_object as *const dyn TestTrait).to_raw_parts();
+        let (_, meta) = PtrExt::to_raw_parts(trait_object as *const dyn TestTrait);
 
         assert_eq!(meta.size_of(), 0);
         assert_eq!(meta.align_of(), 1);
@@ -408,7 +408,7 @@ mod tests {
 
         test_pointee(trait_object);
 
-        let (_, meta) = (trait_object as *const dyn TestTrait).to_raw_parts();
+        let (_, meta) = PtrExt::to_raw_parts(trait_object as *const dyn TestTrait);
 
         assert_eq!(meta.size_of(), 4);
         assert_eq!(meta.align_of(), 4);
