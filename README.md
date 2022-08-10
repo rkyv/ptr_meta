@@ -13,21 +13,24 @@ A radioactive stabilization of the [`ptr_meta` RFC][rfc].
 
 [rfc]: https://rust-lang.github.io/rfcs/2580-ptr-meta.html
 
-## Usage
+# Usage
 
-### Sized types
+## Sized types
 
-Sized types already have `Pointee` implemented for them, so most of the time you won't have to worry
-about them. However, trying to derive `Pointee` for a struct that may or may not have a DST as its
-last field will cause an implementation conflict with the automatic sized implementation.
+All `Sized` types have `Pointee` implemented for them with a blanket implementation. You do not
+need to derive `Pointee` for these types.
 
-### `slice`s and `str`s
+## `slice`s and `str`s
 
 These core types have implementations built in.
 
-### Structs with a DST as its last field
+# `dyn Any`
 
-You can derive `Pointee` for last-field DSTs:
+The trait object for this standard library type comes with an implementation built in.
+
+## Structs with a DST as its last field
+
+You can derive `Pointee` for structs with a trailing DST:
 
 ```rust
 use ptr_meta::Pointee;
@@ -39,9 +42,14 @@ struct Block<H, T> {
 }
 ```
 
-### Trait objects
+Note that this will only work when the last field is guaranteed to be a DST. Structs with a
+generic last field may have a conflicting blanket impl since the generic type may be `Sized`. In
+these cases, a collection of specific implementations may be required with the generic parameter
+set to a slice, `str`, or specific trait object.
 
-You can generate a `Pointee` for trait objects:
+## Trait objects
+
+You can generate a `Pointee` implementation for trait objects:
 
 ```rust
 use ptr_meta::pointee;

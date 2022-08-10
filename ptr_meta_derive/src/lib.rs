@@ -20,20 +20,36 @@ fn derive_pointee_impl(input: &DeriveInput) -> TokenStream {
                 if let Some(result) = fields.named.last() {
                     &result.ty
                 } else {
-                    return Error::new(ident.span(), "dynamically sized structs must contain at least one field").to_compile_error();
+                    return Error::new(
+                        ident.span(),
+                        "dynamically sized structs must contain at least one field",
+                    )
+                    .to_compile_error();
                 }
-            },
+            }
             Fields::Unnamed(ref fields) => {
                 if let Some(result) = fields.unnamed.last() {
                     &result.ty
                 } else {
-                    return Error::new(ident.span(), "dynamically sized structs must contain at least one field").to_compile_error();
+                    return Error::new(
+                        ident.span(),
+                        "dynamically sized structs must contain at least one field",
+                    )
+                    .to_compile_error();
                 }
-            },
-            Fields::Unit => return Error::new(ident.span(), "unit structs cannot be dynamically sized").to_compile_error(),
+            }
+            Fields::Unit => {
+                return Error::new(ident.span(), "unit structs cannot be dynamically sized")
+                    .to_compile_error()
+            }
         },
-        Data::Enum(_) => return Error::new(ident.span(), "enums cannot be dynamically sized").to_compile_error(),
-        Data::Union(_) => return Error::new(ident.span(), "unions cannot be dynamically sized").to_compile_error(),
+        Data::Enum(_) => {
+            return Error::new(ident.span(), "enums cannot be dynamically sized").to_compile_error()
+        }
+        Data::Union(_) => {
+            return Error::new(ident.span(), "unions cannot be dynamically sized")
+                .to_compile_error()
+        }
     };
 
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
