@@ -1,11 +1,9 @@
-# ptr_meta &emsp; [![Latest Version]][crates.io] [![License]][license path] [![requires: rustc 1.47+]][Rust 1.47]
+# ptr_meta &emsp; [![Latest Version]][crates.io] [![License]][license path]
 
 [Latest Version]: https://img.shields.io/crates/v/ptr_meta.svg
 [crates.io]: https://crates.io/crates/ptr_meta
 [License]: https://img.shields.io/badge/license-MIT-blue.svg
 [license path]: https://github.com/djkoloski/ptr_meta/blob/master/LICENSE
-[requires: rustc 1.47+]: https://img.shields.io/badge/rustc-1.47+-lightgray.svg
-[Rust 1.47]: https://blog.rust-lang.org/2020/10/08/Rust-1.47.html
 
 # ptr_meta
 
