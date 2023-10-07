@@ -5,10 +5,12 @@ use syn::{parse_macro_input, Data, DeriveInput, Error, Fields, ItemTrait};
 /// Generates an implementation of `Pointee` for structs with a DST as its last
 /// field.
 #[proc_macro_derive(Pointee)]
-pub fn pointee_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+pub fn pointee_derive(
+    input: proc_macro::TokenStream,
+) -> proc_macro::TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
 
-    proc_macro::TokenStream::from(derive_pointee_impl(&input))
+    derive_pointee_impl(&input).into()
 }
 
 fn derive_pointee_impl(input: &DeriveInput) -> TokenStream {
@@ -22,7 +24,7 @@ fn derive_pointee_impl(input: &DeriveInput) -> TokenStream {
                 } else {
                     return Error::new(
                         ident.span(),
-                        "dynamically sized structs must contain at least one field",
+                        "fieldless structs are not dynamically-sized",
                     )
                     .to_compile_error();
                 }
@@ -33,32 +35,44 @@ fn derive_pointee_impl(input: &DeriveInput) -> TokenStream {
                 } else {
                     return Error::new(
                         ident.span(),
-                        "dynamically sized structs must contain at least one field",
+                        "fieldless structs are not dynamically-sized",
                     )
                     .to_compile_error();
                 }
             }
             Fields::Unit => {
-                return Error::new(ident.span(), "unit structs cannot be dynamically sized")
-                    .to_compile_error()
+                return Error::new(
+                    ident.span(),
+                    "unit structs cannot be dynamically-sized",
+                )
+                .to_compile_error()
             }
         },
         Data::Enum(_) => {
-            return Error::new(ident.span(), "enums cannot be dynamically sized").to_compile_error()
+            return Error::new(
+                ident.span(),
+                "enums cannot be dynamically-sized",
+            )
+            .to_compile_error()
         }
         Data::Union(_) => {
-            return Error::new(ident.span(), "unions cannot be dynamically sized")
-                .to_compile_error()
+            return Error::new(
+                ident.span(),
+                "unions cannot be dynamically-sized",
+            )
+            .to_compile_error()
         }
     };
 
-    let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
+    let (impl_generics, ty_generics, where_clause) =
+        input.generics.split_for_impl();
 
     quote! {
         const _: () = {
             use ptr_meta::Pointee;
 
-            impl #impl_generics Pointee for #ident #ty_generics #where_clause
+            unsafe impl #impl_generics Pointee for
+                #ident #ty_generics #where_clause
             where
                 #last_field_ty: Pointee,
             {
@@ -78,7 +92,8 @@ pub fn pointee(
 
     let ident = &input.ident;
 
-    let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
+    let (impl_generics, ty_generics, where_clause) =
+        input.generics.split_for_impl();
 
     let result = quote! {
         #input
@@ -86,7 +101,9 @@ pub fn pointee(
         const _: () = {
             use ptr_meta::{DynMetadata, Pointee};
 
-            impl #impl_generics Pointee for (dyn #ident #ty_generics #where_clause + '_) {
+            unsafe impl #impl_generics Pointee for
+                (dyn #ident #ty_generics #where_clause + '_)
+            {
                 type Metadata = DynMetadata<Self>;
             }
         };

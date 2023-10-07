@@ -6,16 +6,21 @@ A radioactive stabilization of the [`ptr_meta` RFC][rfc].
 
 ## Sized types
 
-All `Sized` types have `Pointee` implemented for them with a blanket implementation. You do not
-need to derive `Pointee` for these types.
+All `Sized` types have `Pointee` implemented for them with a blanket
+implementation. You do not need to derive `Pointee` for these types.
 
 ## `slice`s and `str`s
 
-These core types have implementations built in.
+These core types have implementations provided.
 
-# `dyn Any`
+## `CStr` and `OsStr`
 
-The trait object for this standard library type comes with an implementation built in.
+These std types have implementations provided when the `std` feature is
+enabled.
+
+## `dyn Any`
+
+This trait object has an implementation provided.
 
 ## Structs with a DST as its last field
 
@@ -31,10 +36,11 @@ struct Block<H, T> {
 }
 ```
 
-Note that this will only work when the last field is guaranteed to be a DST. Structs with a
-generic last field may have a conflicting blanket impl since the generic type may be `Sized`. In
-these cases, a collection of specific implementations may be required with the generic parameter
-set to a slice, `str`, or specific trait object.
+Note that this will only work when the last field is guaranteed to be a DST.
+Structs with a generic last field may have a conflicting blanket impl since
+the generic type may be `Sized`. In these cases, a collection of specific
+implementations may be required with the generic parameter set to a slice,
+`str`, or specific trait object.
 
 ## Trait objects
 
