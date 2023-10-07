@@ -2,27 +2,27 @@ A radioactive stabilization of the [`ptr_meta` RFC][rfc].
 
 [rfc]: https://rust-lang.github.io/rfcs/2580-ptr-meta.html
 
-# Usage
+## Usage
 
-## Sized types
+### Sized types
 
 All `Sized` types have `Pointee` implemented for them with a blanket
 implementation. You do not need to derive `Pointee` for these types.
 
-## `slice`s and `str`s
+### `slice`s and `str`s
 
 These core types have implementations provided.
 
-## `CStr` and `OsStr`
+### `CStr` and `OsStr`
 
 These std types have implementations provided when the `std` feature is
 enabled.
 
-## `dyn Any`
+### `dyn Any`
 
 This trait object has an implementation provided.
 
-## Structs with a DST as its last field
+### Structs with a DST as its last field
 
 You can derive `Pointee` for structs with a trailing DST:
 
@@ -42,7 +42,7 @@ the generic type may be `Sized`. In these cases, a collection of specific
 implementations may be required with the generic parameter set to a slice,
 `str`, or specific trait object.
 
-## Trait objects
+### Trait objects
 
 You can generate a `Pointee` implementation for trait objects:
 
