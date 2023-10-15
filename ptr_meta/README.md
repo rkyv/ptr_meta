@@ -25,9 +25,9 @@ These core types have implementations provided.
 These std types have implementations provided when the `std` feature is
 enabled.
 
-### `dyn Any`
+### `dyn Any` and `dyn Error`
 
-This trait object has an implementation provided.
+These trait objects have implementations provided.
 
 ### Structs with a DST as its last field
 

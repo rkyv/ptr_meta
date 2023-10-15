@@ -9,7 +9,6 @@ repository.workspace = true
 documentation = "https://docs.rs/ptr_meta"
 keywords = ["ptr", "meta", "no_std"]
 categories = ["no-std"]
-readme = "crates-io.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
