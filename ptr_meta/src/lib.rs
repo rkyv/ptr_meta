@@ -132,7 +132,7 @@ mod sealed {
 /// A (possibly-wide) pointer can be put back together from its address and
 /// metadata with [`from_raw_parts`] or [`from_raw_parts_mut`].
 ///
-/// [`to_raw_parts`]: *const::to_raw_parts
+/// [`to_raw_parts`]: PtrExt::to_raw_parts
 ///
 /// # Safety
 ///
@@ -204,7 +204,7 @@ pub const fn metadata<T: Pointee + ?Sized>(
 /// for safety requirements. For trait objects, the metadata must come from a
 /// pointer to the same underlying erased type.
 ///
-/// [`slice::from_raw_parts`]: crate::slice::from_raw_parts
+/// [`slice::from_raw_parts`]: core::slice::from_raw_parts
 #[inline]
 pub const fn from_raw_parts<T: Pointee + ?Sized>(
     data_address: *const (),
