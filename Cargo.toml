@@ -3,9 +3,10 @@ members = [
     "ptr_meta",
     "ptr_meta_derive",
 ]
+resolver = "2"
 
 [workspace.package]
-version = "0.3.0"
+version = "0.3.0-pre1"
 authors = ["David Koloski <djkoloski@gmail.com>"]
 edition = "2021"
 license = "MIT"
@@ -13,6 +14,6 @@ repository = "https://github.com/rkyv/ptr_meta"
 
 [workspace.dependencies]
 proc-macro2 = "1.0"
-ptr_meta_derive =  { path = "ptr_meta_derive" }
+ptr_meta_derive = { version = "0.3.0-pre1", path = "ptr_meta_derive" }
 syn = { version = "2.0", features = ["full"] }
 quote = "1.0"
