@@ -70,6 +70,7 @@
     rustdoc::missing_crate_level_docs
 )]
 #![cfg_attr(not(feature = "std"), no_std)]
+#![cfg_attr(miri, allow(internal_features), feature(core_intrinsics))]
 
 mod impls;
 
@@ -363,6 +364,74 @@ pub struct DynMetadata<Dyn: ?Sized> {
 // substitute but since it's not exposed anywhere, it's close enough.
 struct VTable;
 
+impl<Dyn: ?Sized> DynMetadata<Dyn> {
+    /// Returns the size of the type associated with this vtable.
+    #[inline]
+    pub fn size_of(self) -> usize {
+        #[cfg(miri)]
+        {
+            // Note that "size stored in vtable" is *not* the same as "result of size_of_val_raw".
+            // Consider a reference like `&(i32, dyn Send)`: the vtable will only store the size of the
+            // `Send` part!
+            // SAFETY: DynMetadata always contains a valid vtable pointer
+            return unsafe {
+                core::intrinsics::vtable_size(
+                    self.vtable_ptr as *const VTable as *const (),
+                )
+            };
+        }
+        #[cfg(not(miri))]
+        {
+            // SAFETY: This happens to be true. It may not always be true. The
+            // location of the size for vtables is based on the implementation
+            // of the vtable_size intrinsic.
+            unsafe {
+                (self.vtable_ptr as *const VTable as *const usize)
+                    .add(1)
+                    .read()
+            }
+        }
+    }
+
+    /// Returns the alignment of the type associated with this vtable.
+    #[inline]
+    pub fn align_of(self) -> usize {
+        #[cfg(miri)]
+        {
+            // SAFETY: DynMetadata always contains a valid vtable pointer
+            return unsafe {
+                core::intrinsics::vtable_align(
+                    self.vtable_ptr as *const VTable as *const (),
+                )
+            };
+        }
+        #[cfg(not(miri))]
+        {
+            // SAFETY: This happens to be true. It may not always be true. The
+            // location of the alignment for vtables is based on the
+            // implementation of the vtable_align intrinsic.
+            unsafe {
+                (self.vtable_ptr as *const VTable as *const usize)
+                    .add(2)
+                    .read()
+            }
+        }
+    }
+
+    /// Returns the size and alignment together as a `Layout`
+    #[inline]
+    pub fn layout(self) -> core::alloc::Layout {
+        // SAFETY: the compiler emitted this vtable for a concrete Rust type which
+        // is known to have a valid layout. Same rationale as in `Layout::for_value`.
+        unsafe {
+            core::alloc::Layout::from_size_align_unchecked(
+                self.size_of(),
+                self.align_of(),
+            )
+        }
+    }
+}
+
 // SAFETY: References to trait object vtables are guaranteed to be `Send`.
 unsafe impl<Dyn: ?Sized> Send for DynMetadata<Dyn> {}
 // SAFETY: References to trait object vtables are guaranteed to be `Sync`.
@@ -456,6 +525,7 @@ mod tests {
             c: true,
         });
 
+        #[allow(dead_code)]
         struct TestTuple((), i32, bool);
 
         test_pointee(&TestTuple((), 42, true));
@@ -475,6 +545,7 @@ mod tests {
     fn trait_objects() {
         #[pointee]
         trait TestTrait {
+            #[allow(dead_code)]
             fn foo(&self);
         }
 
@@ -488,6 +559,7 @@ mod tests {
 
         test_pointee(trait_object);
 
+        #[allow(dead_code)]
         struct B(i32);
 
         impl TestTrait for B {
