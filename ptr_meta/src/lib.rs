@@ -1,40 +1,34 @@
 //! A radioactive stabilization of the [`ptr_meta` RFC][rfc].
 //!
-//! `ptr_meta` provides the `Pointee` trait, `from_raw_parts` and `to_raw_parts`
-//! functions, and proc macros for deriving `Pointee` for types and implementing
-//! `Pointee` for trait objects.
+//! This crate provides the [`Pointee`] trait, [`from_raw_parts`] and
+//! [`to_raw_parts`] functions, and proc macros for deriving `Pointee` for
+//! structs and implementing `Pointee` for trait objects.
 //!
 //! [rfc]: https://rust-lang.github.io/rfcs/2580-ptr-meta.html
+//!
+//! # Usage
+//!
+//! Raw pointers can be decomposed into the data address and metadata components
+//! with [`to_raw_parts`] or [`to_raw_parts_mut`].
+//!
+//! Alternatively, metadata alone can be extracted with the [`metadata`]
+//! function. Although [`metadata`] accepts pointers, references can be passed
+//! and will be implicitly coerced.
+//!
+//! A pointer can be created from its address and metadata with
+//! [`from_raw_parts`] or [`from_raw_parts_mut`].
 //!
 //! ## Provided impls
 //!
 //! `ptr_meta` provides inherent implementations for many builtin types:
 //!
-//! ### Sized types
+//! - All [`Sized`] types implement [`Pointee`] via a blanket implementation.
+//! - `slice`s and `str`s
+//! - `CStr` and `OsStr` (requires `std`)
+//! - `dyn Any`, optionally with `+ Send` and/or `+ Sync`
+//! - `dyn Error`, optionally with `+Send` and/or `+ Sync` (requires `std`)
 //!
-//! All [`Sized`] types implement [`Pointee`] via a blanket implementation. You
-//! cannot write or derive [`Pointee`] implementations for these types.
-//!
-//! ### `slice`s and `str`s
-//!
-//! These core types have implementations provided.
-//!
-//! ### `CStr` and `OsStr`
-//!
-//! These `std` types have implementations provided when the `std` feature is
-//! enabled.
-//!
-//! ### `dyn Any` (`+ Send`) (`+ Sync`)
-//!
-//! `dyn Any`, optionally with `+ Send` and/or `+ Sync`, have implementations
-//! provided.
-//!
-//! ### `dyn Error` (`+ Send`) (`+ Sync`)
-//!
-//! `dyn Error`, optionally with `+ Send` and/or `+ Sync`, have implementations
-//! provided when the `std` feature is enabled.
-//!
-//! ### Structs with trailing DSTs
+//! ## Structs with trailing DSTs
 //!
 //! You can derive [`Pointee`] for structs with trailing DSTs:
 //!
@@ -54,7 +48,7 @@
 //! required in these cases, with the generic parameter set (for example) a
 //! slice, `str`, or specific trait object.
 //!
-//! ### Trait objects
+//! ## Trait objects
 //!
 //! You can generate [`Pointee`] implementations for trait objects:
 //!
@@ -69,7 +63,9 @@
 //! ```
 //!
 //! Note that this will not produce implementations for `Trait + Send + Sync`.
-
+//!
+//! ## Example
+#![doc = include_str!("../example.md")]
 #![deny(
     future_incompatible,
     missing_docs,
@@ -101,13 +97,13 @@ pub use ptr_meta_derive::{pointee, Pointee};
 ///
 /// # Pointer metadata
 ///
-/// Pointer and reference types can be thought of as having two parts: a data
-/// pointer which contains the memory address of the value, and some metadata.
+/// Pointers and references can be thought of as having two parts: a data
+/// address and some extra "pointer metadata".
 ///
 /// Pointers to [statically-sized types](`Sized`) and `extern` types are
 /// "narrow": their pointer metadata is `()`.
 ///
-/// Pointers to [dynamically-sized types][dst] are “wide”: they have pointer
+/// Pointers to [dynamically-sized types][dst] are "wide": they have pointer
 /// metadata with a non-zero size. There are four classes of dynamically-sized
 /// types currently available:
 ///
@@ -116,25 +112,13 @@ pub use ptr_meta_derive::{pointee, Pointee};
 /// * Slices like `[i32]` have `usize` pointer metadata equal to the length of
 ///   the slice in items.
 /// * Trait objects like `dyn SomeTrait` have [`DynMetadata`] pointer metadata,
-///   which points to the trait object's virtual method table.
+///   which point to the trait objects' virtual method tables.
 /// * Structs with a trailing DST have the same metadata as the trailing DST.
 ///
 /// In the future, Rust may add new kinds of types which have different pointer
 /// metadata.
 ///
 /// [dst]: https://doc.rust-lang.org/reference/dynamically-sized-types.html
-///
-/// # Usage
-///
-/// Raw pointers can be decomposed into the data address and metadata components
-/// with [`to_raw_parts`] or [`to_raw_parts_mut`].
-///
-/// Alternatively, metadata alone can be extracted with the [`metadata`]
-/// function. Although [`metadata`] accepts pointers, references can be passed
-/// and will be implicitly coerced.
-///
-/// A pointer can be created from its address and metadata with
-/// [`from_raw_parts`] or [`from_raw_parts_mut`].
 ///
 /// # Safety
 ///
@@ -185,9 +169,8 @@ unsafe impl Pointee for ::std::ffi::OsStr {
 /// # Example
 ///
 /// ```
-/// use ptr_meta::metadata;
-///
-/// assert_eq!(metadata("foo"), 3_usize);
+/// // String slices have pointer metadata equal to their size in bytes
+/// assert_eq!(ptr_meta::metadata("foo"), 3_usize);
 /// ```
 #[inline]
 pub const fn metadata<T: Pointee + ?Sized>(
@@ -207,9 +190,7 @@ pub const fn metadata<T: Pointee + ?Sized>(
 /// # Example
 ///
 /// ```
-/// use ptr_meta::to_raw_parts;
-///
-/// let (data_address, metadata) = to_raw_parts("foo");
+/// let (data_address, metadata) = ptr_meta::to_raw_parts("foo");
 /// assert_ne!(data_address, core::ptr::null());
 /// assert_eq!(metadata, 3);
 /// ```
@@ -232,7 +213,7 @@ pub const fn to_raw_parts_mut<T: Pointee + ?Sized>(
 
 /// Returns a raw pointer with the given data address and metadata.
 ///
-/// This function is safe but the returned pointer is not necessarily safe to
+/// This function is safe, but the returned pointer is not necessarily safe to
 /// dereference. For slices, see the documentation of [`slice::from_raw_parts`]
 /// for safety requirements. For trait objects, the metadata must come from a
 /// a trait object with the same underlying type.
@@ -302,25 +283,19 @@ impl<T: Pointee + ?Sized> Clone for PtrComponents<T> {
     }
 }
 
-/// The metadata for a `Dyn = dyn SomeTrait` trait object type.
+/// The metadata for a trait object.
 ///
-/// It is a pointer to a vtable (virtual call table)
-/// that represents all the necessary information
-/// to manipulate the concrete type stored inside a trait object.
-/// The vtable notably it contains:
+/// This struct wraps a pointer to a vtable (virtual method table) which
+/// contains all of the necessary information to manipulate the concrete type
+/// stored inside of the trait object:
 ///
-/// * type size
-/// * type alignment
-/// * a pointer to the type’s `drop_in_place` impl (may be a no-op for
-///   plain-old-data)
-/// * pointers to all the methods for the type’s implementation of the trait
+/// * The size and alignment of the concrete type
+/// * A function pointer to the type's `drop_in_place` impl
+/// * Function pointers for each method in the concrete type's trait
+///   implementation
 ///
-/// Note that the first three are special because they’re necessary to allocate,
-/// drop, and deallocate any trait object.
-///
-/// It is possible to name this struct with a type parameter that is not a `dyn`
-/// trait object (for example `DynMetadata<u64>`) but not to obtain a meaningful
-/// value of that struct.
+/// Providing a type argument that is not a `dyn` trait object is possible, but
+/// does not correspond with a meaningful type.
 pub struct DynMetadata<Dyn: ?Sized> {
     vtable_ptr: &'static VTable,
     phantom: core::marker::PhantomData<Dyn>,
@@ -331,7 +306,7 @@ pub struct DynMetadata<Dyn: ?Sized> {
 struct VTable;
 
 impl<Dyn: ?Sized> DynMetadata<Dyn> {
-    /// Returns the size of the type associated with this vtable.
+    /// Returns the size of the type associated with this metadata.
     #[inline]
     pub fn size_of(self) -> usize {
         #[cfg(miri)]
@@ -360,7 +335,7 @@ impl<Dyn: ?Sized> DynMetadata<Dyn> {
         }
     }
 
-    /// Returns the alignment of the type associated with this vtable.
+    /// Returns the alignment of the type associated with this metadata.
     #[inline]
     pub fn align_of(self) -> usize {
         #[cfg(miri)]
@@ -385,7 +360,7 @@ impl<Dyn: ?Sized> DynMetadata<Dyn> {
         }
     }
 
-    /// Returns the size and alignment together as a `Layout`
+    /// Returns the layout of the type associated with this metadata.
     #[inline]
     pub fn layout(self) -> core::alloc::Layout {
         // SAFETY: the compiler emitted this vtable for a concrete Rust type
