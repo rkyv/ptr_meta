@@ -13,8 +13,9 @@ categories = ["no-std"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-ptr_meta_derive.workspace = true
+ptr_meta_derive = { workspace = true, optional = true }
 
 [features]
-default = ["std"]
+default = ["derive", "std"]
+derive = ["ptr_meta_derive"]
 std = []

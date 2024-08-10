@@ -9,29 +9,37 @@ A radioactive stabilization of the [`ptr_meta` RFC][rfc].
 
 [rfc]: https://rust-lang.github.io/rfcs/2580-ptr-meta.html
 
-## Usage
+Along with the core `Pointee` trait, `PtrExt` extension trait, and
+helper functions, `ptr_meta` also provides inherent implementations for a
+common builtin types:
 
-### Sized types
+## Sized types
 
 All `Sized` types have `Pointee` implemented for them with a blanket
-implementation. You do not need to derive `Pointee` for these types.
+implementation. You cannot write or derive `Pointee` implementations for these
+types.
 
-### `slice`s and `str`s
+## `slice`s and `str`s
 
 These core types have implementations provided.
 
-### `CStr` and `OsStr`
+## `CStr` and `OsStr`
 
-These std types have implementations provided when the `std` feature is
-enabled.
+These std types have implementations provided when the `std` feature is enabled.
 
-### `dyn Any` and `dyn Error`
+## `dyn Any` (`+ Send`) (`+ Sync`)
 
-These trait objects have implementations provided.
+`dyn Any`, optionally with `+ Send` and/or `+ Sync`, have implementations
+provided.
 
-### Structs with a DST as its last field
+## `dyn Error` (`+ Send`) (`+ Sync`)
 
-You can derive `Pointee` for structs with a trailing DST:
+`dyn Error`, optionally with `+ Send` and/or `+ Sync`, have implementations
+provided when the `std` feature is enabled.
+
+## Structs with trailing DSTs
+
+You can derive `Pointee` for structs with trailing DSTs:
 
 ```rust
 use ptr_meta::Pointee;
@@ -43,22 +51,24 @@ struct Block<H, T> {
 }
 ```
 
-Note that this will only work when the last field is guaranteed to be a DST.
-Structs with a generic last field may have a conflicting blanket impl since
-the generic type may be `Sized`. In these cases, a collection of specific
-implementations may be required with the generic parameter set to a slice,
-`str`, or specific trait object.
+Note that the last field is required to be a DST. Structs with a generic type as
+the last field may have conflicting blanket implementations, as the generic type
+may be `Sized`. A collection of specific implementations may be required in
+these cases, with the generic parameter set (for example) a slice, `str`, or
+specific trait object.
 
-### Trait objects
+## Trait objects
 
-You can generate a `Pointee` implementation for trait objects:
+You can generate `Pointee` implementations for trait objects:
 
 ```rust
 use ptr_meta::pointee;
 
 // Generates Pointee for dyn Stringy
-#[pointee]
+#[ptr_meta::pointee]
 trait Stringy {
     fn as_string(&self) -> String;
 }
 ```
+
+Note that this will not produce implementations for `Trait + Send + Sync`.

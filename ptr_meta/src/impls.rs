@@ -1,5 +1,6 @@
-use crate::{DynMetadata, Pointee};
 use core::any::Any;
+
+use crate::{DynMetadata, Pointee};
 
 // SAFETY: The metadata type of `dyn Any` is `DynMetadata<dyn Any>`.
 unsafe impl Pointee for dyn Any {

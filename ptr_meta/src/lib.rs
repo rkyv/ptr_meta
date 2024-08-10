@@ -2,29 +2,37 @@
 //!
 //! [rfc]: https://rust-lang.github.io/rfcs/2580-ptr-meta.html
 //!
-//! ## Usage
+//! Along with the core [`Pointee`] trait, and helper functions, `ptr_meta` also
+//! provides inherent implementations for common types:
 //!
-//! ### Sized types
+//! ## Sized types
 //!
-//! All `Sized` types have `Pointee` implemented for them with a blanket
-//! implementation. You do not need to derive `Pointee` for these types.
+//! All [`Sized`] types have [`Pointee`] implemented for them with a blanket
+//! implementation. You cannot write or derive [`Pointee`] implementations for
+//! these types.
 //!
-//! ### `slice`s and `str`s
+//! ## `slice`s and `str`s
 //!
 //! These core types have implementations provided.
 //!
-//! ### `CStr` and `OsStr`
+//! ## `CStr` and `OsStr`
 //!
 //! These std types have implementations provided when the `std` feature is
 //! enabled.
 //!
-//! ### `dyn Any` and `dyn Error`
+//! ## `dyn Any` (`+ Send`) (`+ Sync`)
 //!
-//! These trait objects have implementations provided.
+//! `dyn Any`, optionally with `+ Send` and/or `+ Sync`, have implementations
+//! provided.
 //!
-//! ### Structs with a DST as its last field
+//! ## `dyn Error` (`+ Send`) (`+ Sync`)
 //!
-//! You can derive `Pointee` for structs with a trailing DST:
+//! `dyn Error`, optionally with `+ Send` and/or `+ Sync`, have implementations
+//! provided when the `std` feature is enabled.
+//!
+//! ## Structs with trailing DSTs
+//!
+//! You can derive [`Pointee`] for structs with trailing DSTs:
 //!
 //! ```
 //! use ptr_meta::Pointee;
@@ -36,25 +44,27 @@
 //! }
 //! ```
 //!
-//! Note that this will only work when the last field is guaranteed to be a DST.
-//! Structs with a generic last field may have a conflicting blanket impl since
-//! the generic type may be `Sized`. In these cases, a collection of specific
-//! implementations may be required with the generic parameter set to a slice,
-//! `str`, or specific trait object.
+//! Note that the last field is required to be a DST. Structs with a generic
+//! type as the last field may have conflicting blanket implementations, as the
+//! generic type may be `Sized`. A collection of specific implementations may be
+//! required in these cases, with the generic parameter set (for example) a
+//! slice, `str`, or specific trait object.
 //!
-//! ### Trait objects
+//! ## Trait objects
 //!
-//! You can generate a `Pointee` implementation for trait objects:
+//! You can generate [`Pointee`] implementations for trait objects:
 //!
 //! ```
 //! use ptr_meta::pointee;
 //!
 //! // Generates Pointee for dyn Stringy
-//! #[pointee]
+//! #[ptr_meta::pointee]
 //! trait Stringy {
 //!     fn as_string(&self) -> String;
 //! }
 //! ```
+//!
+//! Note that this will not produce implementations for `Trait + Send + Sync`.
 
 #![deny(
     future_incompatible,
@@ -70,6 +80,7 @@
     rustdoc::missing_crate_level_docs
 )]
 #![cfg_attr(not(feature = "std"), no_std)]
+#![cfg_attr(all(docsrs, not(doctest)), feature(doc_cfg, doc_auto_cfg))]
 #![cfg_attr(miri, allow(internal_features), feature(core_intrinsics))]
 
 mod impls;
@@ -77,70 +88,56 @@ mod impls;
 use core::{
     fmt,
     hash::{Hash, Hasher},
-    ptr,
 };
+
+#[cfg(feature = "derive")]
 pub use ptr_meta_derive::{pointee, Pointee};
 
-mod sealed {
-    pub trait Sealed {}
-}
-
-/// Provides the pointer metadata type of any pointed-to type.
+/// A trait which associates pointer metadata with a pointee type.
 ///
 /// # Pointer metadata
 ///
-/// Raw pointer types and reference types in Rust can be thought of as made of
-/// two parts: a data pointer that contains the memory address of the value, and
-/// some metadata.
+/// Pointer and reference types can be thought of as having two parts: a data
+/// pointer which contains the memory address of the value, and some metadata.
 ///
-/// For statically-sized types (that implement the `Sized` traits)
-/// as well as for `extern` types,
-/// pointers are said to be “thin”: metadata is zero-sized and its type is `()`.
+/// Pointers to [statically-sized types](`Sized`) and `extern` types are
+/// "narrow": their pointer metadata is `()`.
 ///
-/// Pointers to [dynamically-sized types][dst] are said to be “wide” or “fat”,
-/// they have non-zero-sized metadata:
+/// Pointers to [dynamically-sized types][dst] are “wide”: they have pointer
+/// metadata with a non-zero size. There are four classes of dynamically-sized
+/// types currently available:
 ///
-/// * For structs whose last field is a DST, metadata is the metadata for the
-///   last field
-/// * For the `str` type, metadata is the length in bytes as `usize`
-/// * For slice types like `[T]`, metadata is the length in items as `usize`
-/// * For trait objects like `dyn SomeTrait`, metadata is
-///   [`DynMetadata<Self>`][DynMetadata] (e.g. `DynMetadata<dyn SomeTrait>`)
+/// * `str`s have `usize` pointer metadata equal to the length of the string
+///   slice in bytes.
+/// * Slices like `[i32]` have `usize` pointer metadata equal to the length of
+///   the slice in items.
+/// * Trait objects like `dyn SomeTrait` have [`DynMetadata`] pointer metadata,
+///   which points to the trait object's virtual method table.
+/// * Structs with a trailing DST have the same metadata as the trailing DST.
 ///
-/// In the future, the Rust language may gain new kinds of types
-/// that have different pointer metadata.
+/// In the future, Rust may add new kinds of types which have different pointer
+/// metadata.
 ///
-/// [dst]: https://doc.rust-lang.org/nomicon/exotic-sizes.html#dynamically-sized-types-dsts
-///
-///
-/// # The `Pointee` trait
-///
-/// The point of this trait is its `Metadata` associated type,
-/// which is `()` or `usize` or `DynMetadata<_>` as described above.
-/// It is automatically implemented for every type.
-/// It can be assumed to be implemented in a generic context, even without a
-/// corresponding bound.
-///
+/// [dst]: https://doc.rust-lang.org/reference/dynamically-sized-types.html
 ///
 /// # Usage
 ///
 /// Raw pointers can be decomposed into the data address and metadata components
-/// with their [`to_raw_parts`] method.
+/// with [`to_raw_parts`] or [`to_raw_parts_mut`].
 ///
 /// Alternatively, metadata alone can be extracted with the [`metadata`]
-/// function. A reference can be passed to [`metadata`] and implicitly coerced.
+/// function. Although [`metadata`] accepts pointers, references can be passed
+/// and will be implicitly coerced.
 ///
-/// A (possibly-wide) pointer can be put back together from its address and
-/// metadata with [`from_raw_parts`] or [`from_raw_parts_mut`].
-///
-/// [`to_raw_parts`]: PtrExt::to_raw_parts
+/// A pointer can be created from its address and metadata with
+/// [`from_raw_parts`] or [`from_raw_parts_mut`].
 ///
 /// # Safety
 ///
 /// The associated `Metadata` type must be the pointer metadata type for the
 /// implementing type.
 pub unsafe trait Pointee {
-    /// The type for metadata in pointers and references to `Self`.
+    /// The metadata type for pointers and references to this type.
     type Metadata: Copy + Send + Sync + Ord + Hash + Unpin;
 }
 
@@ -176,10 +173,10 @@ unsafe impl Pointee for ::std::ffi::OsStr {
     type Metadata = usize;
 }
 
-/// Extract the metadata component of a pointer.
+/// Returns the metadata of the given pointer.
 ///
-/// Values of type `*mut T`, `&T`, or `&mut T` can be passed directly to this
-/// function as they implicitly coerce to `*const T`.
+/// `*mut T`, `&T`, and `&mut T` can all be passed directly to this function as
+/// they implicitly coerce to `*const T`.
 ///
 /// # Example
 ///
@@ -198,12 +195,43 @@ pub const fn metadata<T: Pointee + ?Sized>(
     unsafe { PtrRepr { const_ptr: ptr }.components.metadata }
 }
 
-/// Forms a (possibly-wide) raw pointer from a data address and metadata.
+/// Returns the data address and metadata of the given pointer.
+///
+/// `*mut T`, `&T`, and `&mut T` can all be passed directly to this function as
+/// they implicitly coerce to `*const T`.
+///
+/// # Example
+///
+/// ```
+/// use ptr_meta::to_raw_parts;
+///
+/// let (data_address, metadata) = to_raw_parts("foo");
+/// assert_ne!(data_address, core::ptr::null());
+/// assert_eq!(metadata, 3);
+/// ```
+#[inline]
+pub const fn to_raw_parts<T: Pointee + ?Sized>(
+    ptr: *const T,
+) -> (*const (), <T as Pointee>::Metadata) {
+    (ptr as *const (), metadata(ptr))
+}
+
+/// Returns the mutable data address and metadata of the given pointer.
+///
+/// See [`to_raw_parts`] for more details.
+#[inline]
+pub const fn to_raw_parts_mut<T: Pointee + ?Sized>(
+    ptr: *mut T,
+) -> (*mut (), <T as Pointee>::Metadata) {
+    (ptr as *mut (), metadata(ptr))
+}
+
+/// Returns a raw pointer with the given data address and metadata.
 ///
 /// This function is safe but the returned pointer is not necessarily safe to
 /// dereference. For slices, see the documentation of [`slice::from_raw_parts`]
 /// for safety requirements. For trait objects, the metadata must come from a
-/// pointer to the same underlying erased type.
+/// a trait object with the same underlying type.
 ///
 /// [`slice::from_raw_parts`]: core::slice::from_raw_parts
 #[inline]
@@ -225,10 +253,9 @@ pub const fn from_raw_parts<T: Pointee + ?Sized>(
     }
 }
 
-/// Performs the same functionality as [`from_raw_parts`], except that a
-/// raw `*mut` pointer is returned, as opposed to a raw `*const` pointer.
+/// Returns a mutable raw pointer with the given data address and metadata.
 ///
-/// See the documentation of [`from_raw_parts`] for more details.
+/// See [`from_raw_parts`] for more details.
 #[inline]
 pub const fn from_raw_parts_mut<T: Pointee + ?Sized>(
     data_address: *mut (),
@@ -245,71 +272,6 @@ pub const fn from_raw_parts_mut<T: Pointee + ?Sized>(
             },
         }
         .mut_ptr
-    }
-}
-
-/// Extension methods for pointers.
-pub trait PtrExt<T: Pointee + ?Sized>: sealed::Sealed {
-    /// The type's raw pointer (`*const ()` or `*mut ()`).
-    type Raw;
-
-    /// Decompose a (possibly wide) pointer into its address and metadata
-    /// components.
-    ///
-    /// The pointer can be later reconstructed with [`from_raw_parts`].
-    fn to_raw_parts(self) -> (Self::Raw, <T as Pointee>::Metadata);
-}
-
-impl<T: Pointee + ?Sized> sealed::Sealed for *const T {}
-
-impl<T: Pointee + ?Sized> PtrExt<T> for *const T {
-    type Raw = *const ();
-
-    fn to_raw_parts(self) -> (Self::Raw, <T as Pointee>::Metadata) {
-        (self as Self::Raw, metadata(self))
-    }
-}
-
-impl<T: Pointee + ?Sized> sealed::Sealed for *mut T {}
-
-impl<T: Pointee + ?Sized> PtrExt<T> for *mut T {
-    type Raw = *mut ();
-
-    fn to_raw_parts(self) -> (Self::Raw, <T as Pointee>::Metadata) {
-        (self as Self::Raw, metadata(self))
-    }
-}
-
-/// Extension methods for [`NonNull`](core::ptr::NonNull).
-pub trait NonNullExt<T: Pointee + ?Sized>: PtrExt<T> {
-    /// Creates a new non-null pointer from its raw parts.
-    fn from_raw_parts(
-        raw: ptr::NonNull<()>,
-        meta: <T as Pointee>::Metadata,
-    ) -> Self;
-}
-
-impl<T: Pointee + ?Sized> sealed::Sealed for ptr::NonNull<T> {}
-
-impl<T: Pointee + ?Sized> PtrExt<T> for ptr::NonNull<T> {
-    type Raw = ptr::NonNull<()>;
-
-    fn to_raw_parts(self) -> (Self::Raw, <T as Pointee>::Metadata) {
-        let (data_address, metadata) = PtrExt::to_raw_parts(self.as_ptr());
-        // SAFETY: `self` is non-null, and so the data pointer returned from
-        // `to_raw_parts` is also non-null.
-        unsafe { (ptr::NonNull::new_unchecked(data_address), metadata) }
-    }
-}
-
-impl<T: Pointee + ?Sized> NonNullExt<T> for ptr::NonNull<T> {
-    fn from_raw_parts(
-        raw: ptr::NonNull<()>,
-        meta: <T as Pointee>::Metadata,
-    ) -> Self {
-        // SAFETY: `raw` is non-null, and so the data pointer returned from
-        // `from_raw_parts_mut` is also non-null.
-        unsafe { Self::new_unchecked(from_raw_parts_mut(raw.as_ptr(), meta)) }
     }
 }
 
@@ -361,7 +323,7 @@ pub struct DynMetadata<Dyn: ?Sized> {
 }
 
 // Extern types are not stable, so we substitute a ZST. This is not a perfect
-// substitute but since it's not exposed anywhere, it's close enough.
+// substitute but it's not exposed anywhere so it's close enough.
 struct VTable;
 
 impl<Dyn: ?Sized> DynMetadata<Dyn> {
@@ -370,8 +332,9 @@ impl<Dyn: ?Sized> DynMetadata<Dyn> {
     pub fn size_of(self) -> usize {
         #[cfg(miri)]
         {
-            // Note that "size stored in vtable" is *not* the same as "result of size_of_val_raw".
-            // Consider a reference like `&(i32, dyn Send)`: the vtable will only store the size of the
+            // Note that "size stored in vtable" is *not* the same as "result of
+            // size_of_val_raw". Consider a reference like `&(i32,
+            // dyn Send)`: the vtable will only store the size of the
             // `Send` part!
             // SAFETY: DynMetadata always contains a valid vtable pointer
             return unsafe {
@@ -421,8 +384,9 @@ impl<Dyn: ?Sized> DynMetadata<Dyn> {
     /// Returns the size and alignment together as a `Layout`
     #[inline]
     pub fn layout(self) -> core::alloc::Layout {
-        // SAFETY: the compiler emitted this vtable for a concrete Rust type which
-        // is known to have a valid layout. Same rationale as in `Layout::for_value`.
+        // SAFETY: the compiler emitted this vtable for a concrete Rust type
+        // which is known to have a valid layout. Same rationale as in
+        // `Layout::for_value`.
         unsafe {
             core::alloc::Layout::from_size_align_unchecked(
                 self.size_of(),
@@ -490,16 +454,16 @@ impl<Dyn: ?Sized> Hash for DynMetadata<Dyn> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::{from_raw_parts, pointee, Pointee, PtrExt};
-    use crate as ptr_meta;
+fn test_pointee<T: Pointee + ?Sized>(value: &T) {
+    let ptr = value as *const T;
+    let (raw, meta) = to_raw_parts(ptr);
+    let re_ptr = from_raw_parts::<T>(raw, meta);
+    assert_eq!(ptr, re_ptr);
+}
 
-    fn test_pointee<T: Pointee + ?Sized>(value: &T) {
-        let ptr = value as *const T;
-        let (raw, meta) = PtrExt::to_raw_parts(ptr);
-        let re_ptr = from_raw_parts::<T>(raw, meta);
-        assert_eq!(ptr, re_ptr);
-    }
+#[cfg(test)]
+mod tests {
+    use super::test_pointee;
 
     #[test]
     fn sized_types() {
@@ -540,10 +504,17 @@ mod tests {
         test_pointee("hello world");
         test_pointee(&[1, 2, 3, 4] as &[i32]);
     }
+}
+
+#[cfg(all(test, feature = "derive"))]
+mod derive_tests {
+    use core::any::Any;
+
+    use super::{test_pointee, Pointee};
 
     #[test]
     fn trait_objects() {
-        #[pointee]
+        #[crate::pointee(crate)]
         trait TestTrait {
             #[allow(dead_code)]
             fn foo(&self);
@@ -576,6 +547,7 @@ mod tests {
     fn last_field_dst() {
         #[allow(dead_code)]
         #[derive(Pointee)]
+        #[ptr_meta(crate)]
         struct Test<H, T> {
             head: H,
             tail: [T],
@@ -583,15 +555,17 @@ mod tests {
 
         #[allow(dead_code)]
         #[derive(Pointee)]
+        #[ptr_meta(crate)]
         struct TestDyn {
-            tail: dyn core::any::Any,
+            tail: dyn Any,
         }
 
-        #[pointee]
+        #[crate::pointee(crate)]
         trait TestTrait {}
 
         #[allow(dead_code)]
         #[derive(Pointee)]
+        #[ptr_meta(crate)]
         struct TestCustomDyn {
             tail: dyn TestTrait,
         }
@@ -600,7 +574,7 @@ mod tests {
     #[test]
     fn generic_trait() {
         #[allow(dead_code)]
-        #[pointee]
+        #[crate::pointee(crate)]
         trait TestTrait<T: ?Sized> {}
 
         impl<T: ?Sized> TestTrait<T> for () {}
@@ -608,3 +582,8 @@ mod tests {
         test_pointee(&() as &dyn TestTrait<u32>);
     }
 }
+
+// Make sure code in readme is tested. This isn't included in the documentation.
+#[doc = include_str!("../../README.md")]
+#[cfg(doctest)]
+pub struct ReadmeDoctests;
