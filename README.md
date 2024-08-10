@@ -1,74 +1,75 @@
-# ptr_meta &emsp; [![Latest Version]][crates.io] [![License]][license path]
+# `ptr_meta`
 
-[Latest Version]: https://img.shields.io/crates/v/ptr_meta.svg
+[![crates.io badge]][crates.io] [![docs badge]][docs] [![license badge]][license]
+
+[crates.io badge]: https://img.shields.io/crates/v/ptr_meta.svg
 [crates.io]: https://crates.io/crates/ptr_meta
-[License]: https://img.shields.io/badge/license-MIT-blue.svg
-[license path]: https://github.com/djkoloski/ptr_meta/blob/master/LICENSE
+[docs badge]: https://img.shields.io/docsrs/ptr_meta
+[docs]: https://docs.rs/ptr_meta
+[license badge]: https://img.shields.io/badge/license-MIT-blue.svg
+[license]: https://github.com/rkyv/ptr_meta/blob/master/LICENSE
 
-A radioactive stabilization of the [`ptr_meta` RFC][rfc].
+A radioactive stabilization of the [`ptr_meta` RFC].
 
-[rfc]: https://rust-lang.github.io/rfcs/2580-ptr-meta.html
+[`ptr_meta` RFC]: https://rust-lang.github.io/rfcs/2580-ptr-meta.html
 
-Along with the core `Pointee` trait, `PtrExt` extension trait, and
-helper functions, `ptr_meta` also provides inherent implementations for a
-common builtin types:
+## Documentation
 
-## Sized types
+- [ptr_meta](https://docs.rs/ptr_meta), the core library
+- [ptr_meta_derive](https://docs.rs/ptr_meta_derive), proc macros for
+  implementing `Pointee` for structs and trait objects
 
-All `Sized` types have `Pointee` implemented for them with a blanket
-implementation. You cannot write or derive `Pointee` implementations for these
-types.
-
-## `slice`s and `str`s
-
-These core types have implementations provided.
-
-## `CStr` and `OsStr`
-
-These std types have implementations provided when the `std` feature is enabled.
-
-## `dyn Any` (`+ Send`) (`+ Sync`)
-
-`dyn Any`, optionally with `+ Send` and/or `+ Sync`, have implementations
-provided.
-
-## `dyn Error` (`+ Send`) (`+ Sync`)
-
-`dyn Error`, optionally with `+ Send` and/or `+ Sync`, have implementations
-provided when the `std` feature is enabled.
-
-## Structs with trailing DSTs
-
-You can derive `Pointee` for structs with trailing DSTs:
+## Example
 
 ```rust
-use ptr_meta::Pointee;
+// Get the associated metadata for pointers
+let str = "hello world";
+assert_eq!(ptr_meta::metadata(str), str.len());
 
-#[derive(Pointee)]
-struct Block<H, T> {
-    header: H,
-    elements: [T],
+let slice = &[1, 2, 3, 4, 5] as &[i32];
+assert_eq!(ptr_meta::metadata(slice), slice.len());
+
+// Make your own wide pointers from data pointers and metadata
+let bytes = [b'h', b'e', b'l', b'l', b'o'];
+let ptr = ptr_meta::from_raw_parts::<str>(bytes.as_ptr().cast(), 5);
+println!("{} world!", unsafe { &*ptr }); // prints "hello world!"
+
+// Derive Pointee on your own types
+#[derive(ptr_meta::Pointee)]
+#[repr(transparent)]
+struct CoolStr {
+    inner: str,
 }
-```
 
-Note that the last field is required to be a DST. Structs with a generic type as
-the last field may have conflicting blanket implementations, as the generic type
-may be `Sized`. A collection of specific implementations may be required in
-these cases, with the generic parameter set (for example) a slice, `str`, or
-specific trait object.
+impl CoolStr {
+    fn print_cool(&self) {
+        println!("😎 {} 😎", &self.inner);
+    }
+}
 
-## Trait objects
+let ptr = ptr_meta::from_raw_parts::<CoolStr>(bytes.as_ptr().cast(), 5);
+let cool = unsafe { &*ptr };
+cool.print_cool(); // prints "😎 hello 😎"
 
-You can generate `Pointee` implementations for trait objects:
-
-```rust
-use ptr_meta::pointee;
-
-// Generates Pointee for dyn Stringy
+// Implement Pointee for trait objects
 #[ptr_meta::pointee]
-trait Stringy {
-    fn as_string(&self) -> String;
+trait Printable {
+    fn print(&self);
+}
+
+impl Printable for i32 {
+    fn print(&self) {
+        println!("i32: {self}");
+    }
+}
+
+let i32_vtable = ptr_meta::metadata(&0i32 as &dyn Printable);
+let one_hundred = 100i32;
+let printable = ptr_meta::from_raw_parts::<dyn Printable>(
+    (&one_hundred as *const i32).cast(),
+    i32_vtable,
+);
+unsafe {
+    (*printable).print(); // prints "i32: 100"
 }
 ```
-
-Note that this will not produce implementations for `Trait + Send + Sync`.

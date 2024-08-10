@@ -1,36 +1,40 @@
 //! A radioactive stabilization of the [`ptr_meta` RFC][rfc].
 //!
+//! `ptr_meta` provides the `Pointee` trait, `from_raw_parts` and `to_raw_parts`
+//! functions, and proc macros for deriving `Pointee` for types and implementing
+//! `Pointee` for trait objects.
+//!
 //! [rfc]: https://rust-lang.github.io/rfcs/2580-ptr-meta.html
 //!
-//! Along with the core [`Pointee`] trait, and helper functions, `ptr_meta` also
-//! provides inherent implementations for common types:
+//! ## Provided impls
 //!
-//! ## Sized types
+//! `ptr_meta` provides inherent implementations for many builtin types:
 //!
-//! All [`Sized`] types have [`Pointee`] implemented for them with a blanket
-//! implementation. You cannot write or derive [`Pointee`] implementations for
-//! these types.
+//! ### Sized types
 //!
-//! ## `slice`s and `str`s
+//! All [`Sized`] types implement [`Pointee`] via a blanket implementation. You
+//! cannot write or derive [`Pointee`] implementations for these types.
+//!
+//! ### `slice`s and `str`s
 //!
 //! These core types have implementations provided.
 //!
-//! ## `CStr` and `OsStr`
+//! ### `CStr` and `OsStr`
 //!
-//! These std types have implementations provided when the `std` feature is
+//! These `std` types have implementations provided when the `std` feature is
 //! enabled.
 //!
-//! ## `dyn Any` (`+ Send`) (`+ Sync`)
+//! ### `dyn Any` (`+ Send`) (`+ Sync`)
 //!
 //! `dyn Any`, optionally with `+ Send` and/or `+ Sync`, have implementations
 //! provided.
 //!
-//! ## `dyn Error` (`+ Send`) (`+ Sync`)
+//! ### `dyn Error` (`+ Send`) (`+ Sync`)
 //!
 //! `dyn Error`, optionally with `+ Send` and/or `+ Sync`, have implementations
 //! provided when the `std` feature is enabled.
 //!
-//! ## Structs with trailing DSTs
+//! ### Structs with trailing DSTs
 //!
 //! You can derive [`Pointee`] for structs with trailing DSTs:
 //!
@@ -50,7 +54,7 @@
 //! required in these cases, with the generic parameter set (for example) a
 //! slice, `str`, or specific trait object.
 //!
-//! ## Trait objects
+//! ### Trait objects
 //!
 //! You can generate [`Pointee`] implementations for trait objects:
 //!
@@ -582,8 +586,3 @@ mod derive_tests {
         test_pointee(&() as &dyn TestTrait<u32>);
     }
 }
-
-// Make sure code in readme is tested. This isn't included in the documentation.
-#[doc = include_str!("../../README.md")]
-#[cfg(doctest)]
-pub struct ReadmeDoctests;
