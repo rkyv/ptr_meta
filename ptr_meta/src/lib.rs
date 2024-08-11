@@ -23,8 +23,8 @@
 //! `ptr_meta` provides inherent implementations for many builtin types:
 //!
 //! - All [`Sized`] types implement [`Pointee`] via a blanket implementation.
-//! - `slice`s and `str`s
-//! - `CStr` and `OsStr` (requires `std`)
+//! - `slice`, `str`, and `CStr`
+//! - `OsStr` (requires `std`)
 //! - `dyn Any`, optionally with `+ Send` and/or `+ Sync`
 //! - `dyn Error`, optionally with `+Send` and/or `+ Sync` (requires `std`)
 //!
@@ -64,6 +64,12 @@
 //!
 //! Note that this will not produce implementations for `Trait + Send + Sync`.
 //!
+//! ## Features
+//!
+//! - `derive`: Re-exports the macros from `ptr_meta_derive`. Enabled by
+//!   default.
+//! - `std`: Enables additional impls for `std` types. Enabled by default.
+//!
 //! ## Example
 #![doc = include_str!("../example.md")]
 #![deny(
@@ -86,6 +92,7 @@
 mod impls;
 
 use core::{
+    ffi::CStr,
     fmt,
     hash::{Hash, Hasher},
 };
@@ -147,17 +154,16 @@ unsafe impl Pointee for str {
     type Metadata = usize;
 }
 
-#[cfg(feature = "std")]
 // SAFETY: `CStr` pointers have a `usize` representing the length of the
 // C-string slice in bytes (nul included) as their metadata.
-unsafe impl Pointee for ::std::ffi::CStr {
+unsafe impl Pointee for CStr {
     type Metadata = usize;
 }
 
 #[cfg(feature = "std")]
 // SAFETY: `OsStr` pointers have a `usize` representing the length of the
 // string in bytes as their metadata.
-unsafe impl Pointee for ::std::ffi::OsStr {
+unsafe impl Pointee for std::ffi::OsStr {
     type Metadata = usize;
 }
 

@@ -14,7 +14,7 @@ use self::attributes::Attributes;
 ///
 /// Additional arguments can be specified using attributes.
 ///
-/// `#[ptr_meta(...)]` takes the following arguments:
+/// `#[ptr_meta(...)]` accepts the following arguments:
 ///
 /// - `crate = ...`: Chooses an alternative crate path to import ptr_meta from.
 #[proc_macro_derive(Pointee, attributes(ptr_meta))]
