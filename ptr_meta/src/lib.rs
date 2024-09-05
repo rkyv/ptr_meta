@@ -26,7 +26,7 @@
 //! - `slice`, `str`, and `CStr`
 //! - `OsStr` (requires `std`)
 //! - `dyn Any`, optionally with `+ Send` and/or `+ Sync`
-//! - `dyn Error`, optionally with `+Send` and/or `+ Sync` (requires `std`)
+//! - `dyn Error`, optionally with `+ Send` and/or `+ Sync`
 //!
 //! ## Structs with trailing DSTs
 //!

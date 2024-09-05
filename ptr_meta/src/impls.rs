@@ -1,4 +1,4 @@
-use core::any::Any;
+use core::{any::Any, error::Error};
 
 use crate::{DynMetadata, Pointee};
 
@@ -25,29 +25,25 @@ unsafe impl Pointee for dyn Any + Send + Sync {
     type Metadata = DynMetadata<dyn Any + Send + Sync>;
 }
 
-#[cfg(feature = "std")]
 // SAFETY: The metadata type of `dyn Error` is `DynMetadata<dyn Error>`.
-unsafe impl Pointee for dyn std::error::Error {
-    type Metadata = DynMetadata<dyn std::error::Error>;
+unsafe impl Pointee for dyn Error {
+    type Metadata = DynMetadata<dyn Error>;
 }
 
-#[cfg(feature = "std")]
 // SAFETY: The metadata type of `dyn Error + Send` is
 // `DynMetadata<dyn Error + Send>`.
-unsafe impl Pointee for dyn std::error::Error + Send {
-    type Metadata = DynMetadata<dyn std::error::Error + Send>;
+unsafe impl Pointee for dyn Error + Send {
+    type Metadata = DynMetadata<dyn Error + Send>;
 }
 
-#[cfg(feature = "std")]
 // SAFETY: The metadata type of `dyn Error + Sync` is
 // `DynMetadata<dyn Error + Sync>`.
-unsafe impl Pointee for dyn std::error::Error + Sync {
-    type Metadata = DynMetadata<dyn std::error::Error + Sync>;
+unsafe impl Pointee for dyn Error + Sync {
+    type Metadata = DynMetadata<dyn Error + Sync>;
 }
 
-#[cfg(feature = "std")]
 // SAFETY: The metadata type of `dyn Error + Send + Sync` is
 // `DynMetadata<dyn Error + Send + Sync>`.
-unsafe impl Pointee for dyn std::error::Error + Send + Sync {
-    type Metadata = DynMetadata<dyn std::error::Error + Send + Sync>;
+unsafe impl Pointee for dyn Error + Send + Sync {
+    type Metadata = DynMetadata<dyn Error + Send + Sync>;
 }
