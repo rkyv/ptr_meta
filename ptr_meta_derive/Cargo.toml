@@ -4,6 +4,7 @@ description = "Proc macros for ptr_meta"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 license.workspace = true
 readme.workspace = true
 repository.workspace = true

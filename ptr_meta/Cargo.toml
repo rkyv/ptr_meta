@@ -4,6 +4,7 @@ description = "A radioactive stabilization of the ptr_meta rfc"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 license.workspace = true
 readme.workspace = true
 repository.workspace = true
