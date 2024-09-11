@@ -6,7 +6,7 @@ members = [
 resolver = "2"
 
 [workspace.package]
-version = "0.3.0-rc.2"
+version = "0.3.0"
 authors = ["David Koloski <djkoloski@gmail.com>"]
 edition = "2021"
 rust-version = "1.81"
@@ -18,6 +18,6 @@ categories = ["no-std", "no-std::no-alloc"]
 
 [workspace.dependencies]
 proc-macro2 = { version = "1", default-features = false }
-ptr_meta_derive = { version = "=0.3.0-rc.2", default-features = false, path = "ptr_meta_derive" }
+ptr_meta_derive = { version = "0.3.0", default-features = false, path = "ptr_meta_derive" }
 syn = { version = "2", default-features = false }
 quote = { version = "1", default-features = false }
