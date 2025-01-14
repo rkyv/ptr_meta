@@ -52,7 +52,7 @@ fn derive_pointee_impl(mut input: DeriveInput) -> Result<TokenStream, Error> {
         }
     };
 
-    let Some(last_field) = fields.iter().last() else {
+    let Some(last_field) = fields.iter().next_back() else {
         return Err(Error::new(
             ident.span(),
             "fieldless structs always have a provided `Poitnee` impl because
