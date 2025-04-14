@@ -8,7 +8,7 @@ assert_eq!(ptr_meta::metadata(slice), slice.len());
 
 // Make your own wide pointers from data pointers and metadata
 let bytes = [b'h', b'e', b'l', b'l', b'o'];
-let ptr = ptr_meta::from_raw_parts::<str>(bytes.as_ptr().cast(), 5);
+let ptr = ptr_meta::from_raw_parts::<str>(bytes.as_ptr(), 5);
 println!("{} world!", unsafe { &*ptr }); // prints "hello world!"
 
 // Derive Pointee on your own types
@@ -24,7 +24,7 @@ impl CoolStr {
     }
 }
 
-let ptr = ptr_meta::from_raw_parts::<CoolStr>(bytes.as_ptr().cast(), 5);
+let ptr = ptr_meta::from_raw_parts::<CoolStr>(bytes.as_ptr(), 5);
 let cool = unsafe { &*ptr };
 cool.print_cool(); // prints "😎 hello 😎"
 
@@ -43,7 +43,7 @@ impl Printable for i32 {
 let i32_vtable = ptr_meta::metadata(&0i32 as &dyn Printable);
 let one_hundred = 100i32;
 let printable = ptr_meta::from_raw_parts::<dyn Printable>(
-    (&one_hundred as *const i32).cast(),
+    (&one_hundred as *const i32),
     i32_vtable,
 );
 unsafe {
