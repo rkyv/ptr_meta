@@ -167,6 +167,12 @@ unsafe impl Pointee for std::ffi::OsStr {
     type Metadata = usize;
 }
 
+/// Pointers to types implementing this trait alias are “thin”.
+///
+/// This includes statically-Sized types and extern types.
+pub trait Thin: Pointee<Metadata = ()> {}
+impl<T: Pointee<Metadata = ()>> Thin for T {}
+
 /// Returns the metadata of the given pointer.
 ///
 /// `*mut T`, `&T`, and `&mut T` can all be passed directly to this function as
@@ -227,7 +233,7 @@ pub const fn to_raw_parts_mut<T: Pointee + ?Sized>(
 /// [`slice::from_raw_parts`]: core::slice::from_raw_parts
 #[inline]
 pub const fn from_raw_parts<T: Pointee + ?Sized>(
-    data_address: *const (),
+    data_address: *const impl Thin,
     metadata: <T as Pointee>::Metadata,
 ) -> *const T {
     // SAFETY: Accessing the value from the `PtrRepr` union is safe since
@@ -236,7 +242,7 @@ pub const fn from_raw_parts<T: Pointee + ?Sized>(
     unsafe {
         PtrRepr {
             components: PtrComponents {
-                data_address,
+                data_address: data_address.cast(),
                 metadata,
             },
         }
@@ -249,7 +255,7 @@ pub const fn from_raw_parts<T: Pointee + ?Sized>(
 /// See [`from_raw_parts`] for more details.
 #[inline]
 pub const fn from_raw_parts_mut<T: Pointee + ?Sized>(
-    data_address: *mut (),
+    data_address: *mut impl Thin,
     metadata: <T as Pointee>::Metadata,
 ) -> *mut T {
     // SAFETY: Accessing the value from the `PtrRepr` union is safe since
@@ -258,7 +264,7 @@ pub const fn from_raw_parts_mut<T: Pointee + ?Sized>(
     unsafe {
         PtrRepr {
             components: PtrComponents {
-                data_address,
+                data_address: data_address.cast(),
                 metadata,
             },
         }
