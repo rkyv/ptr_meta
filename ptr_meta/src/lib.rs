@@ -86,7 +86,7 @@
     rustdoc::missing_crate_level_docs
 )]
 #![cfg_attr(not(feature = "std"), no_std)]
-#![cfg_attr(all(docsrs, not(doctest)), feature(doc_cfg, doc_auto_cfg))]
+#![cfg_attr(all(docsrs, not(doctest)), feature(doc_cfg))]
 #![cfg_attr(miri, allow(internal_features), feature(core_intrinsics))]
 
 mod impls;
