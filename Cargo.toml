@@ -19,5 +19,5 @@ categories = ["no-std", "no-std::no-alloc"]
 [workspace.dependencies]
 proc-macro2 = { version = "1", default-features = false }
 ptr_meta_derive = { version = "=0.3.1", default-features = false, path = "ptr_meta_derive" }
-syn = { version = "2", default-features = false }
+syn = { version = "3.0", default-features = false }
 quote = { version = "1", default-features = false }
